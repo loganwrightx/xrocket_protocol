@@ -530,6 +530,14 @@ class XRocketPacket
         return buffer;
     }
 
+    /// @brief Gets message type
+    /// @return
+    XRocketPayloadType
+    GetType() const
+    {
+        return xType;
+    }
+
    private:
     uint64_t xTimeStampInMicroSeconds = 0;
     XRocketPayloadType xType = UNKNOWN;
