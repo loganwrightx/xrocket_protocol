@@ -12,6 +12,8 @@ Description: Protocol tools for communication between applications and avionics
 #include <memory>
 #include <vector>
 
+#define PACKET_BUFFER_SIZE 1024
+
 namespace XProtocol
 {
 
