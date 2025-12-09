@@ -1,0 +1,23 @@
+# .clang-format — NASA-style C++ formatting
+BasedOnStyle: Google
+IndentWidth: 4
+UseTab: Never
+ColumnLimit: 80
+DerivePointerAlignment: false
+PointerAlignment: Left
+SpaceAfterCStyleCast: true
+BreakBeforeBraces: Allman
+AllowShortIfStatementsOnASingleLine: false
+AllowShortLoopsOnASingleLine: false
+AllowShortFunctionsOnASingleLine: None
+AlwaysBreakAfterReturnType: All
+BinPackParameters: false
+BinPackArguments: false
+SpaceBeforeParens: ControlStatements
+SpacesInParentheses: false
+SpacesInAngles: false
+SpacesInCStyleCastParentheses: false
+Cpp11BracedListStyle: false
+ReflowComments: true
+SortIncludes: true
+IncludeBlocks: Preserve
