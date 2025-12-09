@@ -530,12 +530,30 @@ class XRocketPacket
         return buffer;
     }
 
-    /// @brief Gets message type
+    /// @brief Get read/write reference to the message type
     /// @return
-    XRocketPayloadType
-    GetType() const
+    XRocketPayloadType&
+    GetType()
     {
         return xType;
+    }
+
+    /// @brief Overrides assignment operator to make new packets dynamically
+    /// @param other
+    /// @return
+    XRocketPacket&
+    operator=(const XRocketPacket& other)
+    {
+        if (this == &other)
+        {
+            return *this;
+        }
+
+        this->xTimeStampInMicroSeconds = other.xTimeStampInMicroSeconds;
+        this->xType = other.xType;
+        this->xPayload = std::make_unique<XRocketPayload>(*other.xPayload);
+
+        return *this;
     }
 
    private:
