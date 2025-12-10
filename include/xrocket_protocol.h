@@ -18,13 +18,13 @@ namespace XProtocol
 {
 
 /// @brief Data structure for grid fin commands
-struct __attribute__((packed)) GridFinCommand
+struct GridFinCommand
 {
     double thetaInRadians = 0.0;
 };
 
 /// @brief Data structure for tvc (engine) commands
-struct __attribute__((packed)) TvcCommand
+struct TvcCommand
 {
     double thrustInPercent = 0.0, thetaXInRadians = 0.0, thetaYInRadians = 0.0;
 };
@@ -330,15 +330,13 @@ class XRocketCommandPayload : public XRocketPayload
 
         // Validate minimum count size to unpack
         if (size < sizeof(uint32_t))
-            std::cout <<
-                "CommandPayload missing gridfin command count!\n";
+            std::cout << "CommandPayload missing gridfin command count!\n";
 
         // Unpack gridfin commands
         uint32_t count;
         std::memcpy(&count, data, sizeof(count));
 
-        std::size_t expected =
-            sizeof(count) + count * sizeof(XProtocol::GridFinCommand);
+        std::size_t expected = sizeof(count) + count * sizeof(double);
         if (size < expected)
             std::cout << "CommandPayload missing commands!\n";
 
@@ -358,8 +356,7 @@ class XRocketCommandPayload : public XRocketPayload
         expected += sizeof(uint32_t);
 
         if (size < expected)
-            std::cout <<
-                "CommandPayload missing engine command count!\n";
+            std::cout << "CommandPayload missing engine command count!\n";
 
         // Copy data to new count variable with offset
         std::memcpy(&count, data + offset, sizeof(count));
@@ -465,8 +462,7 @@ class XRocketPacket
 
         // Final check to confirm size of the data
         if (size < expected)
-            std::cout <<
-                "Data array does not have enough payload bytes!\n";
+            std::cout << "Data array does not have enough payload bytes!\n";
 
         // Initialize the smart pointer for payload
         switch (xType)
@@ -530,6 +526,14 @@ class XRocketPacket
         buffer.insert(buffer.end(), payloadBuffer.begin(), payloadBuffer.end());
 
         return buffer;
+    }
+
+    /// @brief Gets copy of payload in *this
+    /// @return
+    XRocketPayload
+    GetPayload() const
+    {
+        return *xPayload;
     }
 
     /// @brief Get read/write reference to the message type
