@@ -622,18 +622,18 @@ class XRocketPacket
         return buffer;
     }
 
-    /// @brief Gets copy of payload in *this
+    /// @brief Gets pointer to *this payload
     /// @return
-    XRocketPayload
+    const XRocketPayload*
     GetPayload() const
     {
-        return *xPayload;
+        return xPayload.get();
     }
 
     /// @brief Get read/write reference to the message type
     /// @return
-    XRocketPayloadType&
-    GetType()
+    const XRocketPayloadType&
+    GetType() const
     {
         return xType;
     }
