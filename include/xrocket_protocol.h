@@ -624,10 +624,10 @@ class XRocketPacket
 
     /// @brief Gets pointer to *this payload
     /// @return
-    XRocketPayload*
+    const XRocketPayload&
     GetPayload() const
     {
-        return xPayload.get();
+        return *xPayload;
     }
 
     /// @brief Get read/write reference to the message type
