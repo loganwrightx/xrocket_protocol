@@ -541,13 +541,6 @@ class XRocketPacket
         std::memcpy(&payloadLength, data + offset, sizeof(payloadLength));
         offset += sizeof(payloadLength);
 
-        // Debug: print the raw header (optional, keep during debugging)
-        std::cerr << "XRocketPacket ctor: timestamp="
-                  << xTimeStampInMicroSeconds
-                  << " rawType=" << static_cast<int>(rawType)
-                  << " payloadLength=" << payloadLength << " totalSize=" << size
-                  << "\n";
-
         // Validate that payloadLength fits in the remaining bytes
         if (offset + static_cast<std::size_t>(payloadLength) > size)
         {
