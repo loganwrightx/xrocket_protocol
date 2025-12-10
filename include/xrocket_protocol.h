@@ -68,6 +68,12 @@ class XRocketPayload
     Unpack(const std::byte*, std::size_t)
     {
     }
+
+    virtual std::unique_ptr<XRocketPayload>
+    clone() const
+    {
+        return std::make_unique<XRocketPayload>(*this);
+    }
 };
 
 /// @brief Telemetry payload for XRocket protocol
@@ -117,7 +123,7 @@ class XRocketTelemetryPayload : public XRocketPayload
     void
     Pack(std::vector<std::byte>& buffer) override
     {
-        auto AppendToBuffer = [&](const auto& v)
+        auto AppendToBuffer = [&](const auto v)
         {
             const std::byte* p = reinterpret_cast<const std::byte*>(&v);
             buffer.insert(buffer.end(), p, p + sizeof(v));
@@ -153,8 +159,16 @@ class XRocketTelemetryPayload : public XRocketPayload
     void
     Unpack(const std::byte* data, const std::size_t size) override
     {
-        if (size < sizeof(xBaro) * 13)
-            std::cout << "TelemetryPayload size too small!\n";
+        constexpr std::size_t TELEMETRY_FIELDS =
+            3 + 3 + 3 + 1 + 3;  // acc + gyro + mag + baro + lat/lon/alt
+        constexpr std::size_t EXPECTED_TELEMETRY_BYTES =
+            TELEMETRY_FIELDS * sizeof(double);
+        if (size < EXPECTED_TELEMETRY_BYTES)
+        {
+            std::cerr << "TelemetryPayload size too small! expected "
+                      << EXPECTED_TELEMETRY_BYTES << " got " << size << "\n";
+            return;
+        }
 
         auto ReadToVariable = [&](auto& v, std::size_t& offset)
         {
@@ -186,6 +200,14 @@ class XRocketTelemetryPayload : public XRocketPayload
         ReadToVariable(xLat, offset);
         ReadToVariable(xLon, offset);
         ReadToVariable(xAlt, offset);
+    }
+
+    /// @brief Clone method makes new unique pointer to *this
+    /// @return
+    std::unique_ptr<XRocketPayload>
+    clone() const override
+    {
+        return std::make_unique<XRocketTelemetryPayload>(*this);
     }
 
     /// @brief Get accelerometer reading
@@ -284,14 +306,14 @@ class XRocketCommandPayload : public XRocketPayload
     Pack(std::vector<std::byte>& buffer) override
     {
         // Define function to handle buffer append operation
-        auto AppendToBuffer = [&](auto& v)
+        auto AppendToBuffer = [&](auto v)
         {
             const std::byte* p = reinterpret_cast<std::byte*>(&v);
             buffer.insert(buffer.end(), p, p + sizeof(v));
         };
 
         // Always 4 grid fin commands
-        uint32_t count = xGridFinCommands.size();
+        uint32_t count = static_cast<uint32_t>(xGridFinCommands.size());
         const std::byte* gridFinCount = reinterpret_cast<std::byte*>(&count);
 
         buffer.insert(buffer.end(), gridFinCount, gridFinCount + sizeof(count));
@@ -321,58 +343,125 @@ class XRocketCommandPayload : public XRocketPayload
     void
     Unpack(const std::byte* data, const std::size_t size) override
     {
-        // Create function to unpack data from buffer and write to variables
-        auto ReadToVariable = [&](auto& v, std::size_t& offset)
+        // helper that reads into a temporary and assign to target
+        auto ReadToVariable = [&](auto& v, std::size_t& offset) -> bool
         {
-            std::memcpy(&v, data + offset, sizeof(v));
-            offset += sizeof(v);
+            using T = std::decay_t<decltype(v)>;
+            if (offset + sizeof(T) > size)
+                return false;
+            T tmp;
+            std::memcpy(&tmp, data + offset, sizeof(T));
+            offset += sizeof(T);
+            v = tmp;
+            return true;
         };
 
-        // Validate minimum count size to unpack
+        std::size_t offset = 0;
+
+        // Sanity limits
+        constexpr uint32_t MAX_GRIDFINS = 4;
+        constexpr uint32_t MAX_TVCS = 100;
+
+        // Need at least 4 bytes for first count
         if (size < sizeof(uint32_t))
-            std::cout << "CommandPayload missing gridfin command count!\n";
-
-        // Unpack gridfin commands
-        uint32_t count;
-        std::memcpy(&count, data, sizeof(count));
-
-        std::size_t expected = sizeof(count) + count * sizeof(double);
-        if (size < expected)
-            std::cout << "CommandPayload missing commands!\n";
-
-        // Debug message
-        std::cout << "Unpacked " << count << " gridfins!\n";
-
-        xGridFinCommands.resize(count);
-
-        std::size_t offset = sizeof(count);
-
-        for (auto& gridFinCommand : xGridFinCommands)
         {
-            ReadToVariable(gridFinCommand.thetaInRadians, offset);
+            std::cerr << "CommandPayload missing gridfin command count!\n";
+            return;  // abort parsing
         }
 
-        // Then unpack what's left as engines
-        expected += sizeof(uint32_t);
-
-        if (size < expected)
-            std::cout << "CommandPayload missing engine command count!\n";
-
-        // Copy data to new count variable with offset
+        uint32_t count = 0;
         std::memcpy(&count, data + offset, sizeof(count));
         offset += sizeof(count);
 
-        // Debug message
-        std::cout << "Unpacked " << count << " engines!\n";
+        if (count > MAX_GRIDFINS)
+        {
+            std::cerr << "CommandPayload invalid gridfin count: " << count
+                      << " (max " << MAX_GRIDFINS << ")\n";
+            return;
+        }
 
+        // Ensure we have enough bytes for all gridfin doubles
+        if (offset + count * sizeof(double) > size)
+        {
+            std::cerr << "CommandPayload missing gridfin command bytes!\n";
+            return;
+        }
+
+        std::cout << "Unpacked " << count << " gridfins!\n";
+        xGridFinCommands.resize(count);
+
+        for (auto& gridFinCommand : xGridFinCommands)
+        {
+            // read into a local double then assign to the struct member
+            double tmp;
+            if (!ReadToVariable(tmp, offset))
+            {
+                std::cerr << "CommandPayload truncated while reading gridfin "
+                             "command\n";
+                return;
+            }
+            gridFinCommand.thetaInRadians = tmp;
+        }
+
+        // Next must contain the tvc count (uint32_t)
+        if (offset + sizeof(uint32_t) > size)
+        {
+            std::cerr << "CommandPayload missing engine command count!\n";
+            return;
+        }
+
+        std::memcpy(&count, data + offset, sizeof(count));
+        offset += sizeof(count);
+
+        if (count > MAX_TVCS)
+        {
+            std::cerr << "CommandPayload invalid engine count: " << count
+                      << " (max " << MAX_TVCS << ")\n";
+            return;
+        }
+
+        // Ensure enough bytes for all tvc triples
+        if (offset + count * (3 * sizeof(double)) > size)
+        {
+            std::cerr << "CommandPayload missing engine command bytes!\n";
+            return;
+        }
+
+        std::cout << "Unpacked " << count << " engines!\n";
         xTvcCommands.resize(count);
 
-        for (uint32_t i = 0; i < count; i++)
+        for (uint32_t i = 0; i < count; ++i)
         {
-            ReadToVariable(xTvcCommands[i].thrustInPercent, offset);
-            ReadToVariable(xTvcCommands[i].thetaXInRadians, offset);
-            ReadToVariable(xTvcCommands[i].thetaYInRadians, offset);
+            double tmp;
+            if (!ReadToVariable(tmp, offset))
+            {
+                std::cerr << "Truncated reading thrust\n";
+                return;
+            }
+            xTvcCommands[i].thrustInPercent = tmp;
+
+            if (!ReadToVariable(tmp, offset))
+            {
+                std::cerr << "Truncated reading thetaX\n";
+                return;
+            }
+            xTvcCommands[i].thetaXInRadians = tmp;
+
+            if (!ReadToVariable(tmp, offset))
+            {
+                std::cerr << "Truncated reading thetaY\n";
+                return;
+            }
+            xTvcCommands[i].thetaYInRadians = tmp;
         }
+    }
+
+    /// @brief Make a new unique pointer to *this
+    /// @return
+    std::unique_ptr<XRocketPayload>
+    clone() const override
+    {
+        return std::make_unique<XRocketCommandPayload>(*this);
     }
 
     /// @brief Get read-only reference to grid fins commands
@@ -551,13 +640,14 @@ class XRocketPacket
     operator=(const XRocketPacket& other)
     {
         if (this == &other)
-        {
             return *this;
-        }
 
-        this->xTimeStampInMicroSeconds = other.xTimeStampInMicroSeconds;
-        this->xType = other.xType;
-        this->xPayload = std::make_unique<XRocketPayload>(*other.xPayload);
+        xTimeStampInMicroSeconds = other.xTimeStampInMicroSeconds;
+        xType = other.xType;
+        if (other.xPayload)
+            xPayload = other.xPayload->clone();
+        else
+            xPayload.reset();
 
         return *this;
     }
