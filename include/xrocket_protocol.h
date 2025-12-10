@@ -18,13 +18,13 @@ namespace XProtocol
 {
 
 /// @brief Data structure for grid fin commands
-struct GridFinCommand
+struct __attribute__((packed)) GridFinCommand
 {
     double thetaInRadians = 0.0;
 };
 
 /// @brief Data structure for tvc (engine) commands
-struct TvcCommand
+struct __attribute__((packed)) TvcCommand
 {
     double thrustInPercent = 0.0, thetaXInRadians = 0.0, thetaYInRadians = 0.0;
 };
