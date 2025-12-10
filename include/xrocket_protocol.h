@@ -624,7 +624,7 @@ class XRocketPacket
 
     /// @brief Gets pointer to *this payload
     /// @return
-    const XRocketPayload&
+    XRocketPayload&
     GetPayload() const
     {
         return *xPayload;
