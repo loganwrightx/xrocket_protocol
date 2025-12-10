@@ -154,7 +154,7 @@ class XRocketTelemetryPayload : public XRocketPayload
     Unpack(const std::byte* data, const std::size_t size) override
     {
         if (size < sizeof(xBaro) * 13)
-            throw std::runtime_error("TelemetryPayload size too small!");
+            std::cout << "TelemetryPayload size too small!\n";
 
         auto ReadToVariable = [&](auto& v, std::size_t& offset)
         {
@@ -330,8 +330,8 @@ class XRocketCommandPayload : public XRocketPayload
 
         // Validate minimum count size to unpack
         if (size < sizeof(uint32_t))
-            throw std::runtime_error(
-                "CommandPayload missing gridfin command count!");
+            std::cout <<
+                "CommandPayload missing gridfin command count!\n";
 
         // Unpack gridfin commands
         uint32_t count;
@@ -340,7 +340,7 @@ class XRocketCommandPayload : public XRocketPayload
         std::size_t expected =
             sizeof(count) + count * sizeof(XProtocol::GridFinCommand);
         if (size < expected)
-            throw std::runtime_error("CommandPayload missing commands!");
+            std::cout << "CommandPayload missing commands!\n";
 
         // Debug message
         std::cout << "Unpacked " << count << " gridfins!\n";
@@ -358,8 +358,8 @@ class XRocketCommandPayload : public XRocketPayload
         expected += sizeof(uint32_t);
 
         if (size < expected)
-            throw std::runtime_error(
-                "CommandPayload missing engine command count!");
+            std::cout <<
+                "CommandPayload missing engine command count!\n";
 
         // Copy data to new count variable with offset
         std::memcpy(&count, data + offset, sizeof(count));
@@ -432,7 +432,7 @@ class XRocketPacket
 
         // Verify size for timestamp
         if (size < expected)
-            throw std::runtime_error("Data array missing TimeStamp bytes!");
+            std::cout << "Data array missing TimeStamp bytes!\n";
 
         // Copy timestamp data
         std::memcpy(
@@ -443,7 +443,7 @@ class XRocketPacket
         expected += 1;
 
         if (size < expected)
-            throw std::runtime_error("Data array missing PayloadType byte!");
+            std::cout << "Data array missing PayloadType byte!\n";
 
         // Copy payload type byte
         std::memcpy(&xType, data + offset, 1);
@@ -453,7 +453,7 @@ class XRocketPacket
         expected += sizeof(uint32_t);
 
         if (size < expected)
-            throw std::runtime_error("Data array missing PayloadLength bytes!");
+            std::cout << "Data array missing PayloadLength bytes!\n";
 
         // Capture size of payload to let the payload unpack itself
         uint32_t payloadLength;
@@ -465,8 +465,8 @@ class XRocketPacket
 
         // Final check to confirm size of the data
         if (size < expected)
-            throw std::runtime_error(
-                "Data array does not have enough payload bytes!");
+            std::cout <<
+                "Data array does not have enough payload bytes!\n";
 
         // Initialize the smart pointer for payload
         switch (xType)
