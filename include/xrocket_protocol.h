@@ -510,50 +510,56 @@ class XRocketPacket
     /// @param size
     XRocketPacket(const std::byte* data, const std::size_t size)
     {
-        // Initialize offset to 0
         std::size_t offset = 0;
 
-        // Also initialize expeceted size to timestamp for now
-        std::size_t expected = sizeof(xTimeStampInMicroSeconds);
+        // Need at least timestamp (8) + type (1) + payload length (4)
+        constexpr std::size_t MIN_HEADER =
+            sizeof(xTimeStampInMicroSeconds) + 1 + sizeof(uint32_t);
+        if (size < MIN_HEADER)
+        {
+            std::cerr
+                << "XRocketPacket ctor: packet too small for header. size="
+                << size << " expected>=" << MIN_HEADER << "\n";
+            xPayload.reset();
+            return;
+        }
 
-        // Verify size for timestamp
-        if (size < expected)
-            std::cout << "Data array missing TimeStamp bytes!\n";
-
-        // Copy timestamp data
-        std::memcpy(
-            &xTimeStampInMicroSeconds, data, sizeof(xTimeStampInMicroSeconds));
+        // Read timestamp
+        std::memcpy(&xTimeStampInMicroSeconds,
+                    data + offset,
+                    sizeof(xTimeStampInMicroSeconds));
         offset += sizeof(xTimeStampInMicroSeconds);
 
-        // Increment by only 1 for uint8_t (payload type byte)
-        expected += 1;
-
-        if (size < expected)
-            std::cout << "Data array missing PayloadType byte!\n";
-
-        // Copy payload type byte
-        std::memcpy(&xType, data + offset, 1);
+        // Read raw type byte for debug, then assign to enum safely
+        uint8_t rawType = 0;
+        std::memcpy(&rawType, data + offset, 1);
         offset += 1;
+        xType = static_cast<XRocketPayloadType>(rawType);
 
-        // Increment by sizeof(uint32_t) bytes for payload length bytes
-        expected += sizeof(uint32_t);
-
-        if (size < expected)
-            std::cout << "Data array missing PayloadLength bytes!\n";
-
-        // Capture size of payload to let the payload unpack itself
-        uint32_t payloadLength;
+        // Read payload length
+        uint32_t payloadLength = 0;
         std::memcpy(&payloadLength, data + offset, sizeof(payloadLength));
         offset += sizeof(payloadLength);
 
-        // Increment expected by the payload length for the full packet size
-        expected += payloadLength;
+        // Debug: print the raw header (optional, keep during debugging)
+        std::cerr << "XRocketPacket ctor: timestamp="
+                  << xTimeStampInMicroSeconds
+                  << " rawType=" << static_cast<int>(rawType)
+                  << " payloadLength=" << payloadLength << " totalSize=" << size
+                  << "\n";
 
-        // Final check to confirm size of the data
-        if (size < expected)
-            std::cout << "Data array does not have enough payload bytes!\n";
+        // Validate that payloadLength fits in the remaining bytes
+        if (offset + static_cast<std::size_t>(payloadLength) > size)
+        {
+            std::cerr
+                << "XRocketPacket ctor: payloadLength extends beyond packet. "
+                << "offset=" << offset << " payloadLength=" << payloadLength
+                << " size=" << size << "\n";
+            xPayload.reset();
+            return;
+        }
 
-        // Initialize the smart pointer for payload
+        // Create proper payload object for unpacking
         switch (xType)
         {
             case XRocketPayloadType::COMMAND:
@@ -565,12 +571,11 @@ class XRocketPacket
                 break;
 
             default:
-                // This is the base class with no real implementations
                 xPayload = std::make_unique<XRocketPayload>();
                 break;
         }
 
-        // Let payload unpack data
+        // Now safe to call Unpack with exact payload bytes
         xPayload->Unpack(data + offset, payloadLength);
     }
 
