@@ -267,7 +267,8 @@ class XRocketTelemetryPayload : public XRocketPayload
     }
 
    private:
-    std::vector<double> xAcc{ 3, 0.0 }, xGyro{ 3, 0.0 }, xMag{ 3, 0.0 };
+    std::vector<double> xAcc{ 0.0, 0.0, 0.0 }, xGyro{ 0.0, 0.0, 0.0 },
+        xMag{ 0.0, 0.0, 0.0 };
     double xBaro = 0.0, xLat = 0.0, xLon = 0.0, xAlt = 0.0;
 };
 
