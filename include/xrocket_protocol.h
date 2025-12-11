@@ -8,6 +8,7 @@ Description: Protocol tools for communication between applications and avionics
 
 #include <chrono>
 #include <cstring>
+#include <format>
 #include <iostream>
 #include <memory>
 #include <vector>
@@ -73,6 +74,14 @@ class XRocketPayload
     clone() const
     {
         return std::make_unique<XRocketPayload>(*this);
+    }
+
+    /// @brief Gets a format string of the data without line ending
+    /// @return
+    virtual std::string
+    GetFormatString()
+    {
+        return "GetFormatString() not implemented!";
     }
 };
 
@@ -208,6 +217,49 @@ class XRocketTelemetryPayload : public XRocketPayload
     clone() const override
     {
         return std::make_unique<XRocketTelemetryPayload>(*this);
+    }
+
+    /// @brief Gets formatted string of *this telemetry without line ending
+    /// @return
+    std::string
+    GetFormatString() override
+    {
+        std::string telemetryString;
+
+        // Accelerometer readings
+        const std::vector<double>& acc = GetAccelerometerReading();
+
+        telemetryString += "Acc: " + std::format("{:.4f}", acc[0]) + ' ' +
+                           std::format("{:.4f}", acc[1]) + ' ' +
+                           std::format("{:.4f}", acc[2]) + " | ";
+
+        // Gyroscope readings
+        const std::vector<double>& gyro = GetGyroscopeReading();
+
+        telemetryString += "Gyro: " + std::format("{:.4f}", gyro[0]) + ' ' +
+                           std::format("{:.4f}", gyro[1]) + ' ' +
+                           std::format("{:.4f}", gyro[2]) + " | ";
+
+        // Magnetometer readings
+        const std::vector<double>& mag = GetMagnetometerReading();
+
+        telemetryString += "Mag: " + std::format("{:.4f}", mag[0]) + ' ' +
+                           std::format("{:.4f}", mag[1]) + ' ' +
+                           std::format("{:.4f}", mag[2]) + " | ";
+
+        // Latitude reading
+        telemetryString +=
+            "Lat: " + std::format("{:.4f}", GetLatitudeReading()) + " | ";
+
+        // Longitude reading
+        telemetryString +=
+            "Lon: " + std::format("{:.4f}", GetLongitudeReading()) + " | ";
+
+        // Barometer reading
+        telemetryString +=
+            "Baro: " + std::format("{:.4f}", GetBarometerReading());
+
+        return telemetryString;
     }
 
     /// @brief Get accelerometer reading
@@ -463,6 +515,35 @@ class XRocketCommandPayload : public XRocketPayload
     clone() const override
     {
         return std::make_unique<XRocketCommandPayload>(*this);
+    }
+
+    /// @brief Gets formatted string of *this command without line ending
+    /// @return
+    std::string
+    GetFormatString() override
+    {
+        std::string commandString;
+
+        // Get grid fins
+        commandString += "Gridfins: ";
+        for (const auto& gridFinCommand : GetGridFinCommands())
+        {
+            commandString +=
+                std::format("{:.4f}", gridFinCommand.thetaInRadians) + ' ';
+        }
+
+        // Get tvcs
+        commandString += " | Tvcs: ";
+        for (const auto& tvcCommand : GetTvcCommands())
+        {
+            commandString +=
+                "Throttle=" +
+                std::format("{:.1f}", tvcCommand.thrustInPercent) +
+                " X=" + std::format("{:.2f}", tvcCommand.thetaXInRadians) +
+                " Y=" + std::format("{:.2f}", tvcCommand.thetaYInRadians) + ' ';
+        }
+
+        return commandString;
     }
 
     /// @brief Get read-only reference to grid fins commands
