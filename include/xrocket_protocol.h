@@ -14,6 +14,7 @@ Description: Protocol tools for communication between applications and avionics
 #include <vector>
 
 #define PACKET_BUFFER_SIZE 1024
+#define DEBUGGING_PROTOCOL 0
 
 namespace XProtocol
 {
@@ -174,8 +175,10 @@ class XRocketTelemetryPayload : public XRocketPayload
             TELEMETRY_FIELDS * sizeof(double);
         if (size < EXPECTED_TELEMETRY_BYTES)
         {
+#if DEBUGGING_PROTOCOL
             std::cerr << "TelemetryPayload size too small! expected "
                       << EXPECTED_TELEMETRY_BYTES << " got " << size << "\n";
+#endif
             return;
         }
 
@@ -418,7 +421,9 @@ class XRocketCommandPayload : public XRocketPayload
         // Need at least 4 bytes for first count
         if (size < sizeof(uint32_t))
         {
+#if DEBUGGING_PROTOCOL
             std::cerr << "CommandPayload missing gridfin command count!\n";
+#endif
             return;  // abort parsing
         }
 
@@ -428,19 +433,25 @@ class XRocketCommandPayload : public XRocketPayload
 
         if (count > MAX_GRIDFINS)
         {
+#if DEBUGGING_PROTOCOL
             std::cerr << "CommandPayload invalid gridfin count: " << count
                       << " (max " << MAX_GRIDFINS << ")\n";
+#endif
             return;
         }
 
         // Ensure we have enough bytes for all gridfin doubles
         if (offset + count * sizeof(double) > size)
         {
+#if DEBUGGING_PROTOCOL
             std::cerr << "CommandPayload missing gridfin command bytes!\n";
+#endif
             return;
         }
 
+#if DEBUGGING_PROTOCOL
         std::cout << "Unpacked " << count << " gridfins!\n";
+#endif
         xGridFinCommands.resize(count);
 
         for (auto& gridFinCommand : xGridFinCommands)
@@ -449,8 +460,10 @@ class XRocketCommandPayload : public XRocketPayload
             double tmp;
             if (!ReadToVariable(tmp, offset))
             {
+#if DEBUGGING_PROTOCOL
                 std::cerr << "CommandPayload truncated while reading gridfin "
                              "command\n";
+#endif
                 return;
             }
             gridFinCommand.thetaInRadians = tmp;
@@ -459,7 +472,9 @@ class XRocketCommandPayload : public XRocketPayload
         // Next must contain the tvc count (uint32_t)
         if (offset + sizeof(uint32_t) > size)
         {
+#if DEBUGGING_PROTOCOL
             std::cerr << "CommandPayload missing engine command count!\n";
+#endif
             return;
         }
 
@@ -468,19 +483,25 @@ class XRocketCommandPayload : public XRocketPayload
 
         if (count > MAX_TVCS)
         {
+#if DEBUGGING_PROTOCOL
             std::cerr << "CommandPayload invalid engine count: " << count
                       << " (max " << MAX_TVCS << ")\n";
+#endif
             return;
         }
 
         // Ensure enough bytes for all tvc triples
         if (offset + count * (3 * sizeof(double)) > size)
         {
+#if DEBUGGING_PROTOCOL
             std::cerr << "CommandPayload missing engine command bytes!\n";
+#endif
             return;
         }
 
+#if DEBUGGING_PROTOCOL
         std::cout << "Unpacked " << count << " engines!\n";
+#endif
         xTvcCommands.resize(count);
 
         for (uint32_t i = 0; i < count; ++i)
@@ -488,21 +509,27 @@ class XRocketCommandPayload : public XRocketPayload
             double tmp;
             if (!ReadToVariable(tmp, offset))
             {
+#if DEBUGGING_PROTOCOL
                 std::cerr << "Truncated reading thrust\n";
+#endif
                 return;
             }
             xTvcCommands[i].thrustInPercent = tmp;
 
             if (!ReadToVariable(tmp, offset))
             {
+#if DEBUGGING_PROTOCOL
                 std::cerr << "Truncated reading thetaX\n";
+#endif
                 return;
             }
             xTvcCommands[i].thetaXInRadians = tmp;
 
             if (!ReadToVariable(tmp, offset))
             {
+#if DEBUGGING_PROTOCOL
                 std::cerr << "Truncated reading thetaY\n";
+#endif
                 return;
             }
             xTvcCommands[i].thetaYInRadians = tmp;
@@ -599,9 +626,11 @@ class XRocketPacket
             sizeof(xTimeStampInMicroSeconds) + 1 + sizeof(uint32_t);
         if (size < MIN_HEADER)
         {
+#if DEBUGGING_PROTOCOL
             std::cerr
                 << "XRocketPacket ctor: packet too small for header. size="
                 << size << " expected>=" << MIN_HEADER << "\n";
+#endif
             xPayload.reset();
             return;
         }
@@ -626,10 +655,12 @@ class XRocketPacket
         // Validate that payloadLength fits in the remaining bytes
         if (offset + static_cast<std::size_t>(payloadLength) > size)
         {
+#if DEBUGGING_PROTOCOL
             std::cerr
                 << "XRocketPacket ctor: payloadLength extends beyond packet. "
                 << "offset=" << offset << " payloadLength=" << payloadLength
                 << " size=" << size << "\n";
+#endif
             xPayload.reset();
             return;
         }
