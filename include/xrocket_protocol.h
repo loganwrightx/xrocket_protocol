@@ -12,6 +12,7 @@ Description: Protocol tools for communication between applications and avionics
 // XRocket tools
 #include <command_payload.h>
 #include <telemetry_payload.h>
+#include <ack_payload.h>
 
 /*-----------------------------------*/
 /* XROCKET PROTOCOL PACKET STRUCTURE */
