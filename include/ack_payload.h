@@ -25,7 +25,7 @@ class XRocketAckPayload : public XRocketPayload
     /// @brief Packs payload into buffer
     /// @param buffer
     void
-    Pack(std::vector<std::byte>& buffer) override
+    Pack(std::vector<std::byte>&) override
     {
     }
 
@@ -33,7 +33,7 @@ class XRocketAckPayload : public XRocketPayload
     /// @param data
     /// @param size
     void
-    Unpack(const std::byte* data, std::size_t size) override
+    Unpack(const std::byte*, std::size_t) override
     {
     }
 

@@ -10,9 +10,9 @@ Description: Protocol tools for communication between applications and avionics
 #include <chrono>
 
 // XRocket tools
+#include <ack_payload.h>
 #include <command_payload.h>
 #include <telemetry_payload.h>
-#include <ack_payload.h>
 
 /*-----------------------------------*/
 /* XROCKET PROTOCOL PACKET STRUCTURE */
