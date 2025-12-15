@@ -168,6 +168,16 @@ class XRocketPacket
         return xType;
     }
 
+    /// @brief Function wrapper for system call to simplify usage
+    /// @return
+    uint64_t
+    GetTimeStamp()
+    {
+        return std::chrono::duration_cast<std::chrono::microseconds>(
+                   std::chrono::system_clock::now().time_since_epoch())
+            .count();
+    }
+
     /// @brief Overrides assignment operator to make new packets dynamically
     /// @param other
     /// @return
@@ -191,14 +201,4 @@ class XRocketPacket
     uint64_t xTimeStampInMicroSeconds = 0;
     XRocketPayloadType xType = UNKNOWN;
     std::unique_ptr<XRocketPayload> xPayload;
-
-    /// @brief Function wrapper for system call to simplify usage
-    /// @return
-    uint64_t
-    GetTimeStamp()
-    {
-        return std::chrono::duration_cast<std::chrono::microseconds>(
-                   std::chrono::system_clock::now().time_since_epoch())
-            .count();
-    }
 };
