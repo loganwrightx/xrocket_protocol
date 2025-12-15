@@ -24,6 +24,7 @@ class XRocketPacket
     /// @brief Bad constructor, just for quick object declarations
     XRocketPacket() : xPayload(nullptr)
     {
+        xTimeStampInMicroSeconds = GetCurrentTime();
     }
 
     /// @brief Constructor for connecting a payload to a packet
@@ -31,6 +32,7 @@ class XRocketPacket
     XRocketPacket(std::unique_ptr<XRocketPayload> payload)
         : xPayload(std::move(payload))
     {
+        xTimeStampInMicroSeconds = GetCurrentTime();
         xType = xPayload->GetType();
     }
 
@@ -39,6 +41,8 @@ class XRocketPacket
     /// @param size
     XRocketPacket(const std::byte* data, const std::size_t size)
     {
+        xTimeStampInMicroSeconds = GetCurrentTime();
+
         std::size_t offset = 0;
 
         // Need at least timestamp (8) + type (1) + payload length (4)
@@ -129,7 +133,6 @@ class XRocketPacket
                        sizeof(payloadSize) + payloadSize);
 
         // Pack timestamp first
-        xTimeStampInMicroSeconds = GetTimeStamp();
         const std::byte* timeStampBytes =
             reinterpret_cast<std::byte*>(&xTimeStampInMicroSeconds);
         buffer.insert(buffer.end(),
@@ -168,14 +171,10 @@ class XRocketPacket
         return xType;
     }
 
-    /// @brief Function wrapper for system call to simplify usage
+    /// @brief Gets timestamp of packet in microseconds
     /// @return
-    uint64_t
-    GetTimeStamp()
-    {
-        return std::chrono::duration_cast<std::chrono::microseconds>(
-                   std::chrono::system_clock::now().time_since_epoch())
-            .count();
+    uint64_t GetTimeStampInMicroSeconds() const {
+        return xTimeStampInMicroSeconds;
     }
 
     /// @brief Overrides assignment operator to make new packets dynamically
@@ -201,4 +200,14 @@ class XRocketPacket
     uint64_t xTimeStampInMicroSeconds = 0;
     XRocketPayloadType xType = UNKNOWN;
     std::unique_ptr<XRocketPayload> xPayload;
+
+    /// @brief Function wrapper for system call to simplify usage
+    /// @return
+    uint64_t
+    GetCurrentTime()
+    {
+        return std::chrono::duration_cast<std::chrono::microseconds>(
+                   std::chrono::system_clock::now().time_since_epoch())
+            .count();
+    }
 };
