@@ -96,6 +96,10 @@ class XRocketPacket
                 xPayload = std::make_unique<XRocketTelemetryPayload>();
                 break;
 
+            case XRocketPayloadType::ACK:
+                xPayload = std::make_unique<XRocketAckPayload>();
+                break;
+
             default:
                 xPayload = std::make_unique<XRocketPayload>();
                 break;
